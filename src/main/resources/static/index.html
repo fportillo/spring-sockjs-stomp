@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Hello WebSocket</title>
+<script src="sockjs-0.3.4.js"></script>
+<script src="stomp.js"></script>
+<script src="jquery-1.11.0.min.js"></script>
+<style>
+.status {
+    padding: 10px 100px 10px 20px;
+    background-color: #CBCBCB;
+    width: 440px;
+}
+
+.topic {
+    width: 220px;
+    padding: 10px 30px 10px 30px;
+    float: left;
+}
+
+p {
+    background-color: rgba(255, 255, 255, 0.4);
+    color: black;
+    margin-top: 10px;
+    margin-bottom: 10px;
+    padding: 10px 10px 10px 10px;
+}
+
+.foo {
+    color: white;
+    background-color: #5fad75;
+}
+
+.bar {
+    background-color: #f47f81;
+}
+
+.connection {
+    margin-bottom: 20px;
+}
+</style>
+</head>
+<body>
+    <noscript>
+        <h2 style="color: #ff0000">Seems your browser doesn't
+            support Javascript! Websocket relies on Javascript being
+            enabled. Please enable Javascript and reload this page!</h2>
+    </noscript>
+    <div>
+        <div class="status">
+            <h2>
+                STOMP client status: <span id="stompStatus"></span>
+            </h2>
+        </div>
+        <div id="fooTopicDiv" class="topic foo">
+            <h2>Foo Topic</h2>
+            <div class="connection">
+                <button id="fooSubBtn"
+                    onclick="subscribe('foo');">Subscribe</button>
+                <button id="fooUnsubBtn" disabled="disabled"
+                    onclick="unsubscribe('foo');">Unsubscribe</button>
+            </div>
+        </div>
+        <div id="barTopicDiv" class="topic bar">
+            <h2>Bar Topic</h2>
+            <div class="connection">
+                <button id="barSubBtn"
+                    onclick="subscribe('bar');">Subscribe</button>
+                <button id="barUnsubBtn" disabled="disabled"
+                    onclick="unsubscribe('bar');">Unsubscribe</button>
+            </div>
+        </div>
+    </div>
+</body>
+<script type="text/javascript">
+
+    $(document).ready(function() {
+        connect();
+    });
+
+    var client = null;
+    var subscriptions = { foo : null, bar : null};
+
+    function setConnected(connected) {
+        if (connected) {
+            $("#stompStatus").html("CONNECTED");
+        } else {
+            $("#stompStatus").html("DISCONNECTED");
+        }
+    }
+
+    function connect() {
+        var sockjs = new SockJS('/queue');
+        client = Stomp.over(sockjs);
+        client.connect('', '', function(frame) {
+            setConnected(true);
+            console.log('Connected: ' + frame);
+        });
+    }
+
+    function disconnect() {
+        client.disconnect();
+        setConnected(false);
+        console.log("Disconnected");
+    }
+    
+    function subscribe(topic, callback) {
+        subscriptions[topic] = client.subscribe("/topic/" + topic, function(greeting) {
+            update(topic, greeting)
+        });
+ 
+        updateButtons(topic, true);
+    }
+    
+    function updateButtons(topic, subscription) {
+        if (subscription) {
+            $("#" + topic + "SubBtn").attr("disabled", "disabled");
+            $("#" + topic + "UnsubBtn").attr("disabled", false);
+        } else {
+            $("#" + topic + "UnsubBtn").attr("disabled", "disabled");
+            $("#" + topic + "SubBtn").attr("disabled", false);
+        }
+    }
+    
+    function unsubscribe(topic) {
+        client.unsubscribe(subscriptions[topic]);
+        updateButtons(topic, false);
+    }
+
+    
+    function update(topic, greeting) {
+        showMessage(topic, JSON.parse(greeting.body).content);
+    }
+
+    function showMessage(topic, message) {
+        $("#" + topic + "TopicDiv").append("<p>" + message + "</p>");
+    }
+</script>
+</html>
